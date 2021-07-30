@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  grcov:
+    name: grcov
+    runs-on: ubuntu-20.04
+    #if: ${{ github.repository_owner == 'qryxip' && github.ref == 'refs/heads/master' }}
+    if: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up `stable`
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Resolve `grcov ^0.8`
+        id: resolve-versions
+        run: |
+          python - grcov ^0.8 <<'EOF'
+          from argparse import ArgumentParser
+          import json
+          import urllib.request
+          import re
+
+          VERSION_REQ = re.compile(r'\A\^([0-9]+)\.([0-9]+)\Z')
+
+          def parse_version(s):
+              if not (m := VERSION_REQ.match(s)):
+                  raise RuntimeError(f'the version must be `{VERSION_REQ.pattern}`')
+              return (int(m.group(1)), int(m.group(2)))
+
+          parser = ArgumentParser()
+          parser.add_argument('package_name')
+          parser.add_argument('version', type=parse_version)
+          args = parser.parse_args()
+          package_name, (version_req_major, version_req_minor) = args.package_name, args.version
+          with urllib.request.urlopen(f'https://crates.io/api/v1/crates/{package_name}') as res:
+              versions = json.load(res)['versions']
+          matched = set()
+          for version in versions:
+              major, minor, patch_pre_build = version['num'].split('.')
+              major, minor = (int(major), int(minor))
+              if ((major, version_req_major) == (0, 0) and minor == version_req_minor or major == version_req_major and minor >= version_req_minor) and patch_pre_build.isdecimal():
+                  matched.add((minor, int(patch_pre_build)))
+          if not matched:
+              raise RuntimeError(f'No such package: `{package_name} ^{version_req_major}.{version_req_minor}`')
+          minor, patch = max(matched)
+          print(f'{version_req_major}.{minor}.{patch}')
+          EOF
+
+      - name: Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/.crates.toml
+            ~/.cargo/.crates2.json
+            ~/.cargo/bin/grcov
+          key: grcov-${{ steps.resolve-versions.outputs.grcov }}
+
+      - name: Install grcov v${{ steps.resolve-versions.outputs.grcov }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: grcov --version '=${{ steps.resolve-versions.outputs.grcov }}'
+          toolchain: stable
+
+      - name: cargo-run
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+        env:
+          RUSTFLAGS: '-Zinstrument-coverage'
+
+      - name: cargo-test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-fail-fast -v -- --test-threads 1
+          toolchain: ${{ env.CARGO_EQUIP_TEST_NIGHTLY_TOOLCHAIN }}
+        env:
+          RUSTFLAGS: '-Zinstrument-coverage'
+          RUST_BACKTRACE: full
+          LLVM_PROFILE_NAME: '%p-%m.profraw'
+
+      - name: grcov
+        run: grcov . -b ./target/debug -s . -t lcov --branch --ignore-not-existing --ignore "/*" -o lcov.info
+
+      - name: Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: lcov.info
