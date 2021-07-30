@@ -26,6 +26,7 @@ jobs:
           toolchain: nightly
           profile: minimal
           components: llvm-tools-preview
+          default: true
 
       - name: Set up Python 3.9
         uses: actions/setup-python@v2
