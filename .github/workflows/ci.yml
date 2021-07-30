@@ -26,7 +26,6 @@ jobs:
           toolchain: nightly
           profile: minimal
           components: llvm-tools-preview
-          default: true
 
       - name: Set up Python 3.9
         uses: actions/setup-python@v2
@@ -103,8 +102,10 @@ jobs:
           RUST_BACKTRACE: full
           LLVM_PROFILE_NAME: '%p-%m.profraw'
 
+      - run: ls -la
+
       - name: grcov
-        run: grcov . -b ./target/debug -s . -t lcov --branch --ignore-not-existing --ignore "/*" -o lcov.info
+        run: rustup run nightly grcov . -b ./target/debug -s . -t lcov --branch --ignore-not-existing --ignore "/*" -o lcov.info
 
       - name: Codecov
         uses: codecov/codecov-action@v1
