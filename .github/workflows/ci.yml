@@ -20,6 +20,13 @@ jobs:
           toolchain: stable
           profile: minimal
 
+      - name: Set up `nightly`
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: &nightly-toolchain nightly
+          profile: minimal
+          components: llvm-tools-preview
+
       - name: Set up Python 3.9
         uses: actions/setup-python@v2
         with:
@@ -80,6 +87,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: run
+          toolchain: *nightly-toolchain
         env:
           RUSTFLAGS: '-Zinstrument-coverage'
 
