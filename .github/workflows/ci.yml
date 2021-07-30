@@ -130,7 +130,7 @@ jobs:
         env:
           RUSTFLAGS: '-Zinstrument-coverage'
           RUST_BACKTRACE: full
-          LLVM_PROFILE_NAME: '%p-%m.profraw'
+          LLVM_PROFILE_FILE: '%p-%m.profraw'
 
       - run: ls -la
       - run: ls -la /tmp
