@@ -23,7 +23,7 @@ jobs:
       - name: Set up `nightly`
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: &nightly-toolchain nightly
+          toolchain: nightly
           profile: minimal
           components: llvm-tools-preview
 
@@ -87,7 +87,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: run
-          toolchain: *nightly-toolchain
+          toolchain: nightly
         env:
           RUSTFLAGS: '-Zinstrument-coverage'
 
@@ -96,7 +96,7 @@ jobs:
         with:
           command: test
           args: --no-fail-fast -v -- --test-threads 1
-          toolchain: ${{ env.CARGO_EQUIP_TEST_NIGHTLY_TOOLCHAIN }}
+          toolchain: nightly
         env:
           RUSTFLAGS: '-Zinstrument-coverage'
           RUST_BACKTRACE: full
