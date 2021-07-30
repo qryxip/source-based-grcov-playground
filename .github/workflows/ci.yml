@@ -57,7 +57,7 @@ jobs:
           if not matched:
               raise RuntimeError(f'No such package: `{package_name} ^{version_req_major}.{version_req_minor}`')
           minor, patch = max(matched)
-          print(f'{version_req_major}.{minor}.{patch}')
+          print(f'::set-output name=grcov::{version_req_major}.{minor}.{patch}')
           EOF
 
       - name: Cache
