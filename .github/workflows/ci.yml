@@ -103,6 +103,7 @@ jobs:
           LLVM_PROFILE_NAME: '%p-%m.profraw'
 
       - run: ls -la
+      - run: ls -la /tmp
 
       - name: grcov
         run: rustup run nightly grcov . -b ./target/debug -s . -t lcov --branch --ignore-not-existing --ignore "/*" -o lcov.info
