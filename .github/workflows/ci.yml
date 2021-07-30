@@ -34,6 +34,8 @@ jobs:
         with:
           python-version: '3.9'
 
+      - run: gcov -v
+
       - name: Resolve `grcov ^0.8`
         id: resolve-versions
         run: |
