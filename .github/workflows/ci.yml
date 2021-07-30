@@ -25,7 +25,7 @@ jobs:
         with:
           toolchain: nightly
           profile: minimal
-          components: llvm-tools-preview
+          components: llvm-tools-preview,rustfilt
 
       - name: Set up Python 3.9
         uses: actions/setup-python@v2
