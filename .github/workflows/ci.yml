@@ -91,12 +91,18 @@ jobs:
         env:
           RUSTFLAGS: '-Zinstrument-coverage'
 
+      #- name: cargo-test
+      #  uses: actions-rs/cargo@v1
+      #  with:
+      #    command: test
+      #    args: --no-fail-fast -v -- --test-threads 1
+      #    toolchain: nightly
+      #  env:
+      #    RUSTFLAGS: '-Zinstrument-coverage'
+      #    RUST_BACKTRACE: full
+      #    LLVM_PROFILE_NAME: '%p-%m.profraw'
       - name: cargo-test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --no-fail-fast -v -- --test-threads 1
-          toolchain: nightly
+        run: cargo +nightly test --no-fail-fast -v -- --test-threads 1
         env:
           RUSTFLAGS: '-Zinstrument-coverage'
           RUST_BACKTRACE: full
