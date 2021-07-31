@@ -89,7 +89,6 @@ jobs:
             ~/.cargo/.crates.toml
             ~/.cargo/.crates2.json
             ~/.cargo/bin/grcov
-            ~/.cargo/bin/rustfilt
           key: grcov-${{ steps.resolve-versions.outputs.grcov }}
 
       - name: Install grcov v${{ steps.resolve-versions.outputs.grcov }}
@@ -97,13 +96,6 @@ jobs:
         with:
           command: install
           args: grcov --version '=${{ steps.resolve-versions.outputs.grcov }}'
-          toolchain: stable
-
-      - name: Install rustfilt v${{ steps.resolve-versions.outputs.rustfilt }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: rustfilt --version '=${{ steps.resolve-versions.outputs.rustfilt }}'
           toolchain: stable
 
       - name: cargo-run
