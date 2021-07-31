@@ -11,6 +11,48 @@ jobs:
     if: ${{ github.repository_owner == 'qryxip' && github.ref == 'refs/heads/master' }}
     env:
       NIGHTLY_TOOLCHAIN: nightly
+      RESOLVE_VERSIONS_PY: |
+        from argparse import ArgumentParser
+        import json
+        import urllib.request
+        import re
+
+        CRATE_SPEC = re.compile(r'\A([a-zA-Z0-9_]+)@\^([0-9]+)\.([0-9]+)\Z')
+
+
+        def main() -> None:
+            parser = ArgumentParser()
+            parser.add_argument('specs', metavar='PSEUDO_SPECS', type=CrateSpec, nargs='+')
+            args = parser.parse_args()
+            print('\n'.join(map(resolve, args.specs)))
+
+
+        class CrateSpec:
+            def __init__(self, s: str):
+                if not (m := CRATE_SPEC.match(s)):
+                    raise RuntimeError(f'the version must be `{CRATE_SPEC.pattern}`')
+                self.package_name = m.group(1)
+                self.version_req_major = int(m.group(2))
+                self.version_req_minor = int(m.group(3))
+
+
+        def resolve(spec: CrateSpec) -> str:
+            with urllib.request.urlopen(f'https://crates.io/api/v1/crates/{spec.package_name}') as res:
+                versions = json.load(res)['versions']
+            matched = set()
+            for version in versions:
+                major, minor, patch_pre_build = version['num'].split('.')
+                major, minor = (int(major), int(minor))
+                if ((major, spec.version_req_major) == (0, 0) and minor == spec.version_req_minor or major == spec.version_req_major and minor >= spec.version_req_minor) and patch_pre_build.isdecimal():
+                    matched.add((minor, int(patch_pre_build)))
+            if not matched:
+                raise RuntimeError(f'No such package: `{spec.package_name} ^{spec.version_req_major}.{spec.version_req_minor}`')
+            minor, patch = max(matched)
+            return f'::set-output name={spec.package_name}::{spec.version_req_major}.{minor}.{patch}'
+
+
+        if __name__ == '__main__':
+            main()
 
     steps:
       - name: Checkout
@@ -38,50 +80,7 @@ jobs:
 
       - name: Resolve `grcov ^0.8`
         id: resolve-versions
-        run: |
-          python - grcov@^0.8 rustfilt@^0.2 <<'EOF'
-          from argparse import ArgumentParser
-          import json
-          import urllib.request
-          import re
-
-          CRATE_SPEC = re.compile(r'\A([a-zA-Z0-9_]+)@\^([0-9]+)\.([0-9]+)\Z')
-
-
-          def main() -> None:
-              parser = ArgumentParser()
-              parser.add_argument('specs', metavar='PSEUDO_SPECS', type=CrateSpec, nargs='+')
-              args = parser.parse_args()
-              print('\n'.join(map(resolve, args.specs)))
-
-
-          class CrateSpec:
-              def __init__(self, s: str):
-                  if not (m := CRATE_SPEC.match(s)):
-                      raise RuntimeError(f'the version must be `{CRATE_SPEC.pattern}`')
-                  self.package_name = m.group(1)
-                  self.version_req_major = int(m.group(2))
-                  self.version_req_minor = int(m.group(3))
-
-
-          def resolve(spec: CrateSpec) -> str:
-              with urllib.request.urlopen(f'https://crates.io/api/v1/crates/{spec.package_name}') as res:
-                  versions = json.load(res)['versions']
-              matched = set()
-              for version in versions:
-                  major, minor, patch_pre_build = version['num'].split('.')
-                  major, minor = (int(major), int(minor))
-                  if ((major, spec.version_req_major) == (0, 0) and minor == spec.version_req_minor or major == spec.version_req_major and minor >= spec.version_req_minor) and patch_pre_build.isdecimal():
-                      matched.add((minor, int(patch_pre_build)))
-              if not matched:
-                  raise RuntimeError(f'No such package: `{spec.package_name} ^{spec.version_req_major}.{spec.version_req_minor}`')
-              minor, patch = max(matched)
-              return f'::set-output name={spec.package_name}::{spec.version_req_major}.{minor}.{patch}'
-
-
-          if __name__ == '__main__':
-              main()
-          EOF
+        run: python -c "$RESOLVE_VERSIONS_PY" grcov@^0.8
 
       - name: Cache
         uses: actions/cache@v2
